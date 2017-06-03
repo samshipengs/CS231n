@@ -74,7 +74,20 @@ def svm_loss_vectorized(W, X, y, reg):
   # Implement a vectorized version of the structured SVM loss, storing the    #
   # result in loss.                                                           #
   #############################################################################
-  W*X-W
+  n_features, n_classes = W.shape
+  n_train = X.shape[0]
+
+  S = np.matmul(X, W) # score
+  # S_yi = S[range(n_train), y] # or use np.choose
+  S_yi = np.choose(y, S.T) # S_yi
+
+  Li = S - S_yi[:, None] + 1
+  Li[range(n_train), y] = 0 # since we are not supposed to subtract S_yi at index yi
+  Li[Li < 0] = 0 # take the max
+  Li_sum = np.sum(Li, axis=1)
+
+  loss = np.mean(Li_sum) + reg*np.sum(W*W)
+
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
@@ -89,7 +102,22 @@ def svm_loss_vectorized(W, X, y, reg):
   # to reuse some of the intermediate values that you used to compute the     #
   # loss.                                                                     #
   #############################################################################
-  pass
+  mask = np.zeros((n_train, n_classes))
+  mask[Li > 0] = 1 # we only count for non-zero elements in Li, which is max(0, S_j-S_yi+1)
+
+  # however, we didn't include these -S_yi yet in Li, it should appear in the calculation
+  # the same number of times as non-zero Li, except the sign is negative. 
+  nonzero_counts = np.sum(mask, axis=1)
+  mask[range(n_train), y] = -1 * nonzero_counts
+  
+  # now use mask to obtain dW: (D x C)
+  dW = np.matmul(X.T, mask)
+  # print('!!!!!!!!!!!!!!', n_train)
+  dW /= n_train
+  dW + 2.*reg*np.abs(W)
+
+
+
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
