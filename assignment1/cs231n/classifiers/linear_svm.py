@@ -38,7 +38,7 @@ def svm_loss_naive(W, X, y, reg):
         dW[:, j] += X[i]
 
   dW /= num_train
-  dW += 2.*reg*np.abs(W)
+  dW += 2.*reg*W
 
   # Right now the loss is a sum over all training examples, but we want it
   # to be an average instead so we divide by num_train.
@@ -114,7 +114,7 @@ def svm_loss_vectorized(W, X, y, reg):
   dW = np.matmul(X.T, mask)
   # print('!!!!!!!!!!!!!!', n_train)
   dW /= n_train
-  dW + 2.*reg*np.abs(W)
+  dW += 2.*reg*W
 
 
 
