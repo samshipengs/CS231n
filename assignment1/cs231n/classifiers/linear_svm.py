@@ -81,7 +81,7 @@ def svm_loss_vectorized(W, X, y, reg):
   # S_yi = S[range(n_train), y] # or use np.choose
   S_yi = np.choose(y, S.T) # S_yi
 
-  Li = np.subtract(S, S_yi[:, None]) + 1
+  Li = S - S_yi[:, None] + 1
   Li[range(n_train), y] = 0 # since we are not supposed to subtract S_yi at index yi
   Li[Li < 0] = 0 # take the max
   Li_sum = np.sum(Li, axis=1)
@@ -114,8 +114,8 @@ def svm_loss_vectorized(W, X, y, reg):
   dW = np.matmul(X.T, mask)
 
   # average and add regularization
-  dW = np.divide(dW, n_train)
-  dW = np.add(dW, 2.*reg*W)
+  dW /= n_train
+  dW += 2.*reg*W
 
 
 
