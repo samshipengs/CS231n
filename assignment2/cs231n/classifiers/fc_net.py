@@ -178,7 +178,6 @@ class FullyConnectedNet(object):
         # beta2, etc. Scale parameters should be initialized to one and shift      #
         # parameters should be initialized to zero.                                #
         ############################################################################
-        print(hidden_dims)
         input_dimension = input_dim
 
         for i in range(1, self.num_layers):
@@ -189,10 +188,15 @@ class FullyConnectedNet(object):
             input_dimension = hidden_dims[i-1]
 
             if self.use_batchnorm:
-                self.params['gamma'+str(i)] =  1
-                self.params['beta'+str(i)] = 0
-        print(self.params.keys())
-        print(self.num_layers)
+                self.params['gamma'+str(i)] =  np.ones(hidden_dims[i-1])
+                self.params['beta'+str(i)] = np.zeros(hidden_dims[i-1])
+
+        # output layer
+        self.params['W'+str(self.num_layers)] = np.random.normal(scale=weight_scale, 
+                                                                 size=(input_dimension, num_classes))
+        self.params['b'+str(self.num_layers)] = np.zeros(num_classes)
+
+
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -253,14 +257,14 @@ class FullyConnectedNet(object):
 
         caches = {} # for backward pass
         layer_input = X
-        for i in range(1, self.num_layers):
+        for i in range(1, self.num_layers+1):
             out, cache = affine_forward(layer_input, self.params['W'+str(i)], self.params['b'+str(i)])
             caches['affine'+str(i)] = cache
             if i == self.num_layers:
                 # last affine and finish to softmax
                 continue
             if self.use_batchnorm:
-                out, cache = batchnorm_forward(a_out, self.params['gamma'+str(i)], 
+                out, cache = batchnorm_forward(out, self.params['gamma'+str(i)], 
                                                self.params['beta'+str(i)], self.bn_params[i-1])
                 caches['abn'+str(i)] = cache
             out, cache = relu_forward(out)
@@ -295,15 +299,15 @@ class FullyConnectedNet(object):
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
         # {affine - [batch norm] - relu - [dropout]} x (L - 1) - affine - softmax
-        print(caches.keys())
+        # print(caches.keys())
 
         loss, dscores = softmax_loss(scores, y)
-        loss = loss + sum([0.5*self.reg*np.sum(self.params['W'+str(i)]**2) for i in range(1, self.num_layers)])
+        loss = loss + sum([0.5*self.reg*np.sum(self.params['W'+str(i)]**2) for i in range(1, self.num_layers+1)])
         
         # start with last affine layer
-        dx_last_affine, dw_last_affine, db_last_affine = affine_backward(dscores, caches['affine'+str(self.num_layers-1)])
-        grads['W'+str(self.num_layers-1)] = dw_last_affine + self.reg * self.params['W'+str(self.num_layers-1)]
-        grads['b'+str(self.num_layers-1)] = db_last_affine   
+        dx_last_affine, dw_last_affine, db_last_affine = affine_backward(dscores, caches['affine'+str(self.num_layers)])
+        grads['W'+str(self.num_layers)] = dw_last_affine + self.reg * self.params['W'+str(self.num_layers)]
+        grads['b'+str(self.num_layers)] = db_last_affine   
 
         dx = dx_last_affine  
         # print('haha difffernt')
