@@ -189,7 +189,31 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # variance, storing your result in the running_mean and running_var   #
         # variables.                                                          #
         #######################################################################
-        pass
+        # mean
+        mu = np.mean(x, axis=0)
+        # variance
+        xmu = x-mu
+        sq = xmu**2
+        var = np.mean(sq, axis=0)
+
+        # denominator
+        sqrtvar = np.sqrt(var + eps)
+        # numerator is xmu
+        inverse_sqrtvar = 1./sqrtvar
+        # transform x
+        x_hat = xmu*inverse_sqrtvar
+
+        # scale and shift transform
+        gammax = gamma * x_hat
+
+        # out
+        out = gammax + beta
+        cache = (x_hat,gamma,xmu,inverse_sqrtvar,sqrtvar,var,eps)
+
+
+        # update running mean and var
+        running_mean = momentum * running_mean + (1 - momentum) * mu
+        running_var = momentum * running_var + (1 - momentum) * var
         #######################################################################
         #                           END OF YOUR CODE                          #
         #######################################################################
@@ -200,7 +224,8 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # then scale and shift the normalized data using gamma and beta.      #
         # Store the result in the out variable.                               #
         #######################################################################
-        pass
+        x_hat = (x - bn_param['running_mean'])/(np.sqrt(bn_param['running_var']+eps))
+        out = gamma*x_hat + beta
         #######################################################################
         #                          END OF YOUR CODE                           #
         #######################################################################
@@ -236,7 +261,45 @@ def batchnorm_backward(dout, cache):
     # TODO: Implement the backward pass for batch normalization. Store the    #
     # results in the dx, dgamma, and dbeta variables.                         #
     ###########################################################################
-    pass
+    # we will follow the naive implementation in:
+    # https://kratzert.github.io/2016/02/12/understanding-the-gradient-flow-through-the-batch-normalization-layer.html
+    x_hat,gamma,xmu,inverse_sqrtvar,sqrtvar,var,eps = cache
+    N, D = dout.shape
+
+    # step 9: gamma*x_hat + beta
+    dbeta = np.sum(dout, axis=0) # summing over all data pts
+
+    # step 8
+    dgamma = np.sum(x_hat * dout, axis=0)
+    # dx_hat = gamma * dout
+
+    # # step 7
+    # # step 7_1: x-u
+    # dxmu = dx_hat * inverse_sqrtvar
+    # # step 7_2: 1/sqrt(sig^2+eps)
+    # dinv = np.sum(dx_hat * xmu, axis=0) 
+
+    # # step 6
+    # dsq_sig2_eps = -1/inverse_sqrtvar**2 * dinv
+    # # step 5
+    # dsr_sig2_eps = 0.5/np.srqt(var+eps) * dsq_sig2_eps
+    # # step 4
+    # dsum = np.ones((N,D)) * dsr_sig2_eps / N
+    # # step 3 
+    # dxmu2 = 2. * xmu * dsum
+    # print(var)
+    # print(np.mean(xmu, axis=0))
+    # print(dout.shape)
+    # print('gamma:', gamma, gamma.shape)
+
+    # let's just do a compact expression in one go
+
+    factor = gamma * inverse_sqrtvar 
+    dx1 = dout
+    dx2 = np.sum(dout, axis=0)/N
+    dx3 = np.sum(dout*xmu, axis=0)*xmu/sqrtvar**2/N
+    dx = factor * (dx1 - dx2 -dx3)
+
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -266,7 +329,17 @@ def batchnorm_backward_alt(dout, cache):
     # should be able to compute gradients with respect to the inputs in a     #
     # single statement; our implementation fits on a single 80-character line.#
     ###########################################################################
-    pass
+    x_hat,gamma,xmu,inverse_sqrtvar,sqrtvar,var,eps = cache
+    N, D = dout.shape
+
+    dbeta = np.sum(dout, axis=0)
+    dgamma = np.sum(x_hat * dout, axis=0)
+
+    factor = gamma * inverse_sqrtvar 
+    dx1 = dout
+    dx2 = np.sum(dout, axis=0)/N
+    dx3 = np.sum(dout*xmu, axis=0)*xmu/sqrtvar**2/N
+    dx = factor * (dx1 - dx2 -dx3)
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
