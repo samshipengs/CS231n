@@ -454,7 +454,30 @@ def conv_forward_naive(x, w, b, conv_param):
     # TODO: Implement the convolutional forward pass.                         #
     # Hint: you can use the function np.pad for padding.                      #
     ###########################################################################
-    pass
+    # first pad x
+    pad, stride = conv_param['pad'], conv_param['stride']
+    x_pad = np.pad(x, ((0,0),(0,0),(pad,pad),(pad,pad)), mode='constant')
+    # print(x_pad)
+    print('padded x shape:', x_pad.shape)
+    N, C, H, W = x.shape
+    F, _, HH, WW = w.shape # filter size
+    H_new = 1 + (H + 2 * pad - HH) // stride
+    W_new = 1 + (W + 2 * pad - WW) // stride
+    # print(H_new, W_new)
+    # print(H,W)
+    print('x shape:', x.shape,'w shape',  w.shape)
+    result = np.zeros((N, F, H_new, W_new))
+    h_steps, w_steps = H//stride+1, W//stride+1
+    for i in range(h_steps-1):
+        for j in range(w_steps-1):
+            x_local = x_pad[:, :, i:i+h_steps+1, j:j+w_steps+1]
+            print('x_local shape', x_local.shape, 'w shape', w.shape)
+            # treat convolution just as inner product
+            conv_ij = x_local[:, None, :, :, :] * w[None,:,:,:,:] #+ b[None, :, None, None, None]
+            result_ij = np.sum(conv_ij, axis=(2,3,4)) + b[None, :]
+            result[:, :, i, j] = result_ij
+    out = result
+
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
